@@ -101,9 +101,6 @@ function createTagFollicule(tagElement)
 
 	var tagname = tagElement.text;
 
-	//wrap in escaped quotes
-	tagname = `\\"` + tagname + `\\"`;
-
 	var includeScript = `document.getElementById("work_search_other_tag_names_autocomplete").value=` + `"` + tagname+ `";`;
 
 	var excludeScript = `document.getElementById("work_search_excluded_tag_names_autocomplete").value=` + `"` + tagname+ `";`;

@@ -6,6 +6,7 @@
 // @author       lyrisey
 // @match        *://*.archiveofourown.org/tags*works*
 // @match        *://*.archiveofourown.org/works*
+// @match        *://*.archiveofourown.org/users*works*
 // @icon         https://www.google.com/s2/favicons?domain=tampermonkey.net
 // @grant        none
 // ==/UserScript==
@@ -100,6 +101,9 @@ function createTagFollicule(tagElement)
 	//TODO: pull scripting into proper functions rather than JS in the element
 
 	var tagname = tagElement.text;
+
+	//wrap in escaped quotes
+	//tagname = `\\"` + tagname + `\\"`;
 
 	var includeScript = `document.getElementById("work_search_other_tag_names_autocomplete").value=` + `"` + tagname+ `";`;
 

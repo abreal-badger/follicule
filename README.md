@@ -2,7 +2,7 @@
 
 ![Screencap of an Ao3 work demonstrating UI elements](https://cdn.discordapp.com/attachments/815182420407615509/866837631409324102/unknown.png)
 
-Follicule is a Tampermonkey script for Archive of Our Own that adds (+/-) buttons after every tag and author name when looking at works associated with a tag (fandom, ship, character, etc.)
+Follicule is a Tampermonkey script for Archive of Our Own that adds (+/-) buttons after every tag and author name when looking at works associated with a tag (fandom, ship, character, etc.) or author.
 
 Clicking the + button includes that tag or user in your search criteria.
 

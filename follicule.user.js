@@ -4,9 +4,10 @@
 // @version      0.1
 // @description  Adds button elements to author names and tags on AO3 search results to allow easy filtering.
 // @author       lyrisey
-// @match        *://*.archiveofourown.org/tags*works*
+// @match        *://*.archiveofourown.org/tags/**/works*
 // @match        *://*.archiveofourown.org/works*
-// @match        *://*.archiveofourown.org/users*works*
+// @match        *://*.archiveofourown.org/users/**/works*
+// @match        *://*.archiveofourown.org/collections/**/works*
 // @icon         https://www.google.com/s2/favicons?domain=tampermonkey.net
 // @grant        none
 // ==/UserScript==

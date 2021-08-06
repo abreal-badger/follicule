@@ -15,9 +15,7 @@
 
 function createFolliculeButton(buttonText, buttonScript)
 {
-	var follButton;
-
-	follButton = document.createElement("input");
+	let follButton = document.createElement("input");
 	follButton.setAttribute("type","button");
 	follButton.setAttribute("value",buttonText);
 	follButton.setAttribute("onclick", buttonScript)
@@ -31,38 +29,38 @@ function createFolliculeButton(buttonText, buttonScript)
 
 function createFollicule(element, includeScript, excludeScript)
 {
-	//given a ao3 element of the appropriate type(tag/username), create a 'follicule' - a 'lil dingus after that link with interfaces streamlining filtering 'n stuff (+/-)
+    /* For a given element, create a 'follicule': a UI component
+    with functionality related to the content and context of that element.
+    */
 
-
-
-	// `element` is the element you want to wrap
-	var parent = element.parentNode;
-	var follWrapper = document.createElement('span');
-	follWrapper.setAttribute("class","follicule wrapper");
+    //Wrap the element in a span that will contain both the element and the follicule
+	const parentElement = element.parentNode;
+	let folliculeWrapper = document.createElement('span');
+	folliculeWrapper.setAttribute("class","follicule wrapper");
 	//set the wrap for each span so the element and the button set are together
-	follWrapper.setAttribute("style", `white-space: pre;`);
+	folliculeWrapper.setAttribute("style", `white-space: pre;`);
 
 	// set the wrapper as child (instead of the element)
-	parent.replaceChild(follWrapper, element);
+	parentElement.replaceChild(folliculeWrapper, element);
 	// set element as child of wrapper
-	follWrapper.appendChild(element);
+	folliculeWrapper.appendChild(element);
 
 	//set up a secondary span for the buttons themselves to sit in next to the element
-	var folliculeSpan = document.createElement('span');
+	let folliculeSpan = document.createElement('span');
 	folliculeSpan.setAttribute("class","follicule buttons");
-	follWrapper.appendChild(folliculeSpan);
+	folliculeWrapper.appendChild(folliculeSpan);
 
 
 	//and start stuffing elements into that span
 	//spacer
-		folliculeSpan.appendChild(document.createTextNode(" "));
+	folliculeSpan.appendChild(document.createTextNode(" "));
 
 	//+ stuff
-	var plus = createFolliculeButton("+",includeScript);
+	let plus = createFolliculeButton("+",includeScript);
 	folliculeSpan.appendChild(plus);
 
 	//- stuff
-	var minus = createFolliculeButton("-",excludeScript);
+	let minus = createFolliculeButton("-",excludeScript);
 	folliculeSpan.appendChild(minus);
 
 
@@ -70,25 +68,20 @@ function createFollicule(element, includeScript, excludeScript)
 
 function createAuthorFollicule(authorElement)
 {
-	//TODO: pull scripting into proper functions rather than JS in the element
-
-	var authorname = authorElement.text;
-
-
+	let authorname = authorElement.text;
 
 	//wrap in escaped quotes - authors can have spaces in their names and we want to catch that.
 	authorname = `\\"` + authorname + `\\"`;
 
-	var QueryText = `creators:`+authorname;
+	let QueryText = `creators:`+authorname;
 
-	var scriptText = `document.getElementById("work_search_query").value= document.getElementById("work_search_query").value+`;
+	let scriptText = `document.getElementById("work_search_query").value= document.getElementById("work_search_query").value+`;
 
-	var includeScript = scriptText + `" ` + QueryText+ `";`;
+	let includeScript = scriptText + `" ` + QueryText+ `";`;
 
-	var excludeScript = scriptText + `" ` + "-" + QueryText+ `";`;
+	let excludeScript = scriptText + `" ` + "-" + QueryText+ `";`;
 
-	var scriptClick ="";
-	scriptClick = `document.getElementById("work-filters").getElementsByClassName("submit actions")[0].children[0].click();`
+	let scriptClick = `document.getElementById("work-filters").getElementsByClassName("submit actions")[0].children[0].click();`
 
 	includeScript += scriptClick;
 	excludeScript += scriptClick;
@@ -99,18 +92,14 @@ function createAuthorFollicule(authorElement)
 
 function createTagFollicule(tagElement)
 {
-	//TODO: pull scripting into proper functions rather than JS in the element
 
-	var tagname = tagElement.text;
+	let tagname = tagElement.text;
 
-	//wrap in escaped quotes
-	//tagname = `\\"` + tagname + `\\"`;
+	let includeScript = `document.getElementById("work_search_other_tag_names_autocomplete").value=` + `"` + tagname+ `";`;
 
-	var includeScript = `document.getElementById("work_search_other_tag_names_autocomplete").value=` + `"` + tagname+ `";`;
+	let excludeScript = `document.getElementById("work_search_excluded_tag_names_autocomplete").value=` + `"` + tagname+ `";`;
 
-	var excludeScript = `document.getElementById("work_search_excluded_tag_names_autocomplete").value=` + `"` + tagname+ `";`;
-
-	var scriptClick ="";
+	let scriptClick ="";
 	scriptClick = `document.getElementById("work-filters").getElementsByClassName("submit actions")[0].children[0].click();`
 
 	includeScript += scriptClick;
@@ -120,38 +109,38 @@ function createTagFollicule(tagElement)
 
 }
 
+function processWorkTags(workListing)
+{
+    /* Follicules for tags (fandom, relationship, character, freeform) */
+    for (let tag of workListing.getElementsByClassName("tag"))
+    {
+        createTagFollicule(tag);
+    }
+}
 
-
-/**************************************/
+function processWorkAuthors(workListing)
+{
+    //follicules for authors
+    for (let workLink of workListing.getElementsByTagName("a"))
+    {
+        //check links - attribute 'rel', value 'author'
+        if (workLink.getAttribute("rel")=="author")
+        {
+            createAuthorFollicule(workLink);
+        }
+    }
+}
 
 function main()
 {
-	//check to make sure we're on a page with the UI elements we need to actually do filtering
+	/* Check to make sure we're on a page with the UI elements we need to actually do filtering. */
 	if (document.getElementById("work-filters")!= null)
 	{
+        /* Start by looking in the DOM for the "work index group" class - this is the list of works on the page*/
+        let workListing = document.getElementsByClassName("work index group")[0];
 
-	//TODO: set up class sheets for follicule elements
-	//todo: do I need to explicitly inject scripting into the page for button clicks?
-
-	/* Start by looking in the DOM for the "work index group" class - this is the list of works on the page*/
-
-	const workListing = document.getElementsByClassName("work index group")[0];
-
-	//follicules for tags
-	for (let tag of workListing.getElementsByClassName("tag"))
-	{
-		createTagFollicule(tag);
-	}
-
-	//follicules for users
-	for (let workLink of workListing.getElementsByTagName("a"))
-	{
-		//check links - attribute 'rel', value 'author'
-		if (workLink.getAttribute("rel")=="author")
-        {
-			createAuthorFollicule(workLink);
-        }
-	}
+        processWorkTags(workListing);
+        processWorkAuthors(workListing);
 	}
 }
 

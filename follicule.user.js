@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Follicule: Streamlined AO3 Search Filtering
 // @namespace    http://tampermonkey.net/
-// @version      0.1
+// @version      0.5
 // @description  Adds button elements to author names and tags on AO3 search results to allow easy filtering.
 // @author       lyrisey
 // @match        *://*.archiveofourown.org/tags/**/works*
@@ -17,13 +17,16 @@
 
 
 class follSpanStyle {
+    static useButtonTitleTooltips = false;
+
     static useBackgroundHighlight = true;
     static useBorder = true;
 
     static backgroundHighlightOn = "background: rgba(89, 152, 214, 0.5);";
     static backgroundHighlightOff = "background: rgba(89, 152, 214, 0.0);";
-    static borderOn = "border-style: dashed; border-width: 0px 0px thick 0px;";
-    static borderOff = "border-style: hidden; border-width: 0px 0px thick 0px;";
+
+    static borderOn = " border-style: dashed; border-width: 0px 0px thick 0px;";
+    static borderOff = " border-style: hidden; border-width: 0px 0px thick 0px;";
 
     static generateStyle(isEntering)
     {
@@ -57,7 +60,7 @@ class follSpanStyle {
 class workPage {
     static filterID = "work-filters";
     static workListingName = "work index group"
-    static authorQueryID = "work_search_query";
+    static queryID = "work_search_query";
     static tagIncludeQueryID = "work_search_other_tag_names_autocomplete";
     static tagExcludeQueryID = "work_search_excluded_tag_names_autocomplete";
 }
@@ -65,7 +68,7 @@ class workPage {
 class bookmarkPage {
     static filterID = "bookmark-filters";
     static workListingName = "bookmark index group";
-    static authorQueryID = "bookmark_search_bookmarkable_query";
+    static queryID = "bookmark_search_bookmarkable_query";
     static tagIncludeQueryID = "bookmark_search_other_tag_names_autocomplete";
     static tagExcludeQueryID = "bookmark_search_excluded_tag_names_autocomplete"
 
@@ -102,7 +105,7 @@ class scriptBuilder{
     }
 }
 
-function createFolliculeButton(buttonText, buttonScript, element)
+function createFolliculeButton(buttonText, buttonScript)
 {
     let follButton = document.createElement("input");
     follButton.setAttribute("type","button");
@@ -110,7 +113,7 @@ function createFolliculeButton(buttonText, buttonScript, element)
     follButton.setAttribute("onclick", buttonScript)
 
     //TODO: set up button css in a stylesheet because this is apparently bad practice
-    follButton.setAttribute("style","width: 2.25ch; height:1.5em;");
+    follButton.setAttribute("style","display: inline-block;position: relative; width: 2.25ch;");
     //maybe see about the alignment too?
 
     return follButton;
@@ -129,13 +132,19 @@ function createFollicule(element, includeScript, excludeScript)
 
 
     /* Tags can wrap onto multiple lines, so mousing over the wrapper/buttons adds a highlight to identify what's going to be filtered */
-    folliculeWrapper.addEventListener("mouseover", function() {
-        folliculeWrapper.setAttribute("style", follSpanStyle.generateStyle(true));
-    });
+    if (follSpanStyle.useBackgroundHighlight == true || follSpanStyle.useBorder == true)
+    {
+        //set default for element so style doesn't 'jump' on mouseover
+        folliculeWrapper.setAttribute("style",follSpanStyle.generateStyle(false));
 
-    folliculeWrapper.addEventListener("mouseout", function() {
-        folliculeWrapper.setAttribute("style", follSpanStyle.generateStyle(false));
-    });
+        folliculeWrapper.addEventListener("mouseover", function() {
+            folliculeWrapper.setAttribute("style", follSpanStyle.generateStyle(true));
+        });
+
+        folliculeWrapper.addEventListener("mouseout", function() {
+            folliculeWrapper.setAttribute("style", follSpanStyle.generateStyle(false));
+        });
+    }
 
     // set the wrapper as child of the parent, replacing the original
     parentElement.replaceChild(folliculeWrapper, element);
@@ -148,7 +157,9 @@ function createFollicule(element, includeScript, excludeScript)
     folliculeSpan.setAttribute("class","follicule buttons");
 
     //set the wrap for the span so the buttons are together
-    folliculeSpan.setAttribute("style", `white-space: pre;`);
+    //margin_top is used here to provide spacing for underline highlights on the line above
+    //TODO make this dynamic as part of static highlighting flags up top
+    folliculeSpan.setAttribute("style", `white-space: pre; display: inline-block; margin-top: 2px;`);
 
     folliculeWrapper.appendChild(folliculeSpan);
 
@@ -158,39 +169,51 @@ function createFollicule(element, includeScript, excludeScript)
     folliculeSpan.appendChild(document.createTextNode(" "));
 
     //+ button
-    let plus = createFolliculeButton("+",includeScript, element);
+    let plus = createFolliculeButton("+",includeScript);
     folliculeSpan.appendChild(plus);
 
     //- button
-    let minus = createFolliculeButton("-",excludeScript, element);
+    let minus = createFolliculeButton("-",excludeScript);
     folliculeSpan.appendChild(minus);
 }
 
-function createAuthorFollicule(authorElement, isBookmarkPage)
+function createQueryFollicule(queryFilterValue, querySearchElement, isBookmarkPage)
 {
+    /* Author and series (and potentially other) kinds of identifiers
+    have to be entered as freeform queries with special operators
+    to indicate what's being queried on. */
+
+    /* These currently take the form of [classifier:][value] pairs:
+        creators:[authorname] to require an author
+        -creators:[authorname] to exclude them
+
+        params for this fn thus mirror this:
+        [queryfiltervalue][querysearchelement.text]
+    */
+
     let filterID;
-    let authorQueryID;
+    let queryID;
 
     if (isBookmarkPage == true)
     {
         filterID = bookmarkPage.filterID;
-        authorQueryID = bookmarkPage.authorQueryID;
+        queryID = bookmarkPage.queryID;
     }
 
     else if (isBookmarkPage == false)
     {
         filterID = workPage.filterID;
-        authorQueryID = workPage.authorQueryID;
+        queryID = workPage.queryID;
     }
 
-    let authorname = authorElement.text;
+    let queryValue = querySearchElement.text;
 
-    //wrap in escaped quotes - authors can have spaces in their names and we want to catch that.
-    authorname = `\\"` + authorname + `\\"`;
+    //wrap in escaped quotes - these values can have spaces and we want to catch that.
+    queryValue = `\\"` + queryValue + `\\"`;
 
-    let QueryText = `creators:`+authorname;
+    let QueryText = queryFilterValue + queryValue;
 
-    let scriptText = `document.getElementById("` + authorQueryID + `").value= document.getElementById("` + authorQueryID + `").value+`;
+    let scriptText = `document.getElementById("` + queryID + `").value= document.getElementById("` + queryID + `").value+`;
 
     let includeScript = scriptText + `" ` + QueryText+ `";`;
 
@@ -199,10 +222,21 @@ function createAuthorFollicule(authorElement, isBookmarkPage)
     includeScript += scriptBuilder.submitClick(filterID);
     excludeScript += scriptBuilder.submitClick(filterID);
 
-    createFollicule(authorElement, includeScript, excludeScript);
-
+    createFollicule(querySearchElement, includeScript, excludeScript);
 }
 
+//TODO: move these strings into a single location for ease of maint.
+function createSeriesFollicule(seriesElement, isBookmarkPage)
+{
+    createQueryFollicule(`series.title:`, seriesElement, isBookmarkPage);
+}
+
+function createAuthorFollicule(authorElement, isBookmarkPage)
+{
+    createQueryFollicule(`creators:`, authorElement, isBookmarkPage);
+}
+
+//TODO - createWorkTagFollicule and createBookmarkTagFollicule have a lot of shared code. Refactor?
 function createWorkTagFollicule(tagElement, isBookmarkPage)
 {
     let filterID;
@@ -289,6 +323,15 @@ function processWorkTags(workListing, isBookmarkPage)
         for (let fandom of fandoms.getElementsByClassName("tag"))
         {
             createWorkTagFollicule(fandom, isBookmarkPage);
+        }
+    }
+
+    /* Another loop for series links */
+    for (let sequentials of workListing.getElementsByClassName("series"))
+    {
+        for (let series of sequentials.getElementsByTagName("a"))
+        {
+            createSeriesFollicule(series, isBookmarkPage);
         }
     }
 

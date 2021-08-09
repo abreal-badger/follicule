@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Follicule: Streamlined AO3 Search Filtering
 // @namespace    http://tampermonkey.net/
-// @version      0.5
+// @version      0.5.1
 // @description  Adds button elements to author names and tags on AO3 search results to allow easy filtering.
 // @author       lyrisey
 // @match        *://*.archiveofourown.org/tags/**/works*
@@ -236,7 +236,19 @@ function createAuthorFollicule(authorElement, isBookmarkPage)
     createQueryFollicule(`creators:`, authorElement, isBookmarkPage);
 }
 
-//TODO - createWorkTagFollicule and createBookmarkTagFollicule have a lot of shared code. Refactor?
+function createTagFollicule(tagElement, filterID, includeQueryID, excludeQueryID)
+{
+    let tagname = tagElement.text;
+    let includeScript = scriptBuilder.addTag(includeQueryID, tagname);
+    let excludeScript = scriptBuilder.addTag(excludeQueryID, tagname);
+
+    includeScript += scriptBuilder.submitClick(filterID);
+    excludeScript += scriptBuilder.submitClick(filterID);
+
+    createFollicule(tagElement, includeScript, excludeScript);
+
+}
+
 function createWorkTagFollicule(tagElement, isBookmarkPage)
 {
     let filterID;
@@ -248,6 +260,7 @@ function createWorkTagFollicule(tagElement, isBookmarkPage)
         filterID = bookmarkPage.filterID;
         includeQueryID =  bookmarkPage.tagIncludeQueryID;
         excludeQueryID = bookmarkPage.tagExcludeQueryID;
+
     }
 
     else if (isBookmarkPage == false)
@@ -257,16 +270,7 @@ function createWorkTagFollicule(tagElement, isBookmarkPage)
         excludeQueryID = workPage.tagExcludeQueryID;
     }
 
-    let tagname = tagElement.text;
-
-
-    let includeScript = scriptBuilder.addTag(includeQueryID, tagname);
-    let excludeScript = scriptBuilder.addTag(excludeQueryID, tagname);
-
-    includeScript += scriptBuilder.submitClick(filterID);
-    excludeScript += scriptBuilder.submitClick(filterID);
-
-    createFollicule(tagElement, includeScript, excludeScript);
+    createTagFollicule(tagElement, filterID, includeQueryID, excludeQueryID);
 
 }
 
@@ -275,20 +279,12 @@ function createBookmarkTagFollicule(tagElement, isBookmarkPage)
     let filterID;
     let includeQueryID;
     let excludeQueryID;
-
+    
     filterID = bookmarkPage.filterID;
     includeQueryID =  bookmarkPage.bmarkTagIncludeQueryID;
     excludeQueryID = bookmarkPage.bmarkTagExcludeQueryID;
 
-    let tagname = tagElement.text;
-
-    let includeScript = scriptBuilder.addTag(includeQueryID, tagname);
-    let excludeScript = scriptBuilder.addTag(excludeQueryID, tagname);
-
-    includeScript += scriptBuilder.submitClick(filterID);
-    excludeScript += scriptBuilder.submitClick(filterID);
-
-    createFollicule(tagElement, includeScript, excludeScript);
+    createTagFollicule(tagElement, filterID, includeQueryID, excludeQueryID);
 
 }
 

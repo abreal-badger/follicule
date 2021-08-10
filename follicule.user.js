@@ -186,7 +186,6 @@ function createQueryFollicule(queryFilterValue, querySearchElement, isBookmarkPa
     /* These currently take the form of [classifier:][value] pairs:
         creators:[authorname] to require an author
         -creators:[authorname] to exclude them
-
         params for this fn thus mirror this:
         [queryfiltervalue][querysearchelement.text]
     */
@@ -228,7 +227,14 @@ function createQueryFollicule(queryFilterValue, querySearchElement, isBookmarkPa
 //TODO: move these strings into a single location for ease of maint.
 function createSeriesFollicule(seriesElement, isBookmarkPage)
 {
-    createQueryFollicule(`series.title:`, seriesElement, isBookmarkPage);
+    /* 
+    as of 20210809, filtering by series.title appears to be broken on bookmark pages 
+    so that functionality is being snipped for now
+    */
+    if (isBookmarkPage == false)
+    {
+        createQueryFollicule(`series.title:`, seriesElement, isBookmarkPage);
+    }
 }
 
 function createAuthorFollicule(authorElement, isBookmarkPage)
@@ -279,7 +285,7 @@ function createBookmarkTagFollicule(tagElement, isBookmarkPage)
     let filterID;
     let includeQueryID;
     let excludeQueryID;
-    
+
     filterID = bookmarkPage.filterID;
     includeQueryID =  bookmarkPage.bmarkTagIncludeQueryID;
     excludeQueryID = bookmarkPage.bmarkTagExcludeQueryID;

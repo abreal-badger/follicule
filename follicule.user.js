@@ -25,38 +25,38 @@ class FolliculeStyle {
 
     /* Mousing over follicule buttons highlights the associated link, same as with normal Ao3 functionality. */
     static useBackgroundHighlight = true;
-    
+
     /* Note that these use RGBA rather than RGB - the opacity is a hack to allow background highlighting without overwriting the site's normal background values for an element. */
 
     static backgroundHighlightOn = "rgba(89, 152, 214, 0.5)";
     static backgroundHighlightOff = "rgba(89, 152, 214, 0.0)";
 
     /* Borders/Underlining */
-    
+
     /* Some site skins might interfere with highlighting via background modification. This is a secondary option that uses borders to underline elements in a way that doesn't interfere. */
-    
     static useBorder = true;
-    
+
 
     /* The following aren't intended to be easily user-modifiable; they're included here as a common point of access for maintenance purposes. */
 
-
     /* Styling for the span that wraps a element and follicule */
     static wrapperSpanStyle = ""
-    
+
     /* Styling for the span that wraps a follicule button pair. */
     /* The inline-block option is so you don't get a single button wrapping to the next line. */
     static buttonSpanStyle = ""
-        //+"white-space: pre;"
-        +"display: inline-block;"
-        +"padding-left: .25em;"
-        +"margin-bottom: .2em;"
-        ;
- 
-    
+    +"display: inline-block;"
+    +"padding-left: .25em;"
+    +"margin-bottom: .2em;"
+    ;
+
     /* Styling for follicule buttons */
     /* input elements expand to fill space, so we use line-height to fit the element to the size of the containing text */
-    static buttonStyle = "width: 1.4em;line-height: inherit;vertical-align: text-top;";
+    static buttonStyle = ""
+    +"width: 1.4em;"
+    +"line-height: inherit;"
+    +"vertical-align: text-top;"
+    ;
 
 }
 
@@ -81,8 +81,6 @@ class Follicule
 
         if (FolliculeStyle.useBackgroundHighlight == true || FolliculeStyle.useBorder == true)
         {
-            
-
             folliculeWrapper.addEventListener("mouseover", function() {
                 // TODO: This is reliant on the element being wrapped being a <a> tag with a border - are there cases where this isn't going to be the case?
                 let element = folliculeWrapper.getElementsByTagName("a")[0];
@@ -95,8 +93,6 @@ class Follicule
                 }
                 if (FolliculeStyle.useBackgroundHighlight)
                 {
-
-
                     element.style.background = FolliculeStyle.backgroundHighlightOn;
                 }
 
@@ -116,13 +112,13 @@ class Follicule
                     element.style.backgroundColor = "";
                 }
             });
-        } 
+        }
         return (folliculeWrapper);
     }
 
     static createButtonSpan()
     {
-         //set up a secondary span for the buttons themselves to sit in next to the element
+        //set up a secondary span for the buttons themselves to sit in next to the element
         let folliculeSpan = document.createElement('span');
         folliculeSpan.setAttribute("class","follicule buttons");
 
@@ -136,17 +132,16 @@ class Follicule
         follButton.setAttribute("type","button");
         follButton.setAttribute("value",buttonText);
         follButton.setAttribute("onclick", buttonScript)
-    
+
         //TODO: set up button css in a stylesheet because this is apparently bad practice
         follButton.setAttribute("style",FolliculeStyle.buttonStyle);
         //maybe see about the alignment too?
-    
+
         return (follButton);
     }
 
     static create(element, includeScript, excludeScript, includeButtonValue = '+', excludeButtonValue = '-')
     {
-  
         /* For a given element, create a 'follicule': a UI component
         with functionality related to the content and context of that element.
         */
@@ -155,29 +150,19 @@ class Follicule
         const parentElement = element.parentNode;
         let folliculeWrapper = this.createWrapperSpan();
 
-    
-
         // set the wrapper as child of the parent, replacing the original
         parentElement.replaceChild(folliculeWrapper, element);
         // set element as child of wrapper
         folliculeWrapper.appendChild(element);
 
-
-        
-
         //set up a secondary span for the buttons themselves to sit in next to the element
         let folliculeSpan = this.createButtonSpan();
-
         folliculeWrapper.appendChild(folliculeSpan);
 
-        
-
-
         //and start stuffing elements into that span
-        
-
-        
-
+        /* TODO: idle thought, but break this out into different Follicule subtypes 
+        - inclusion/exclusion?
+        - less-than.greater-than for things like numeric elements? */
         //Inclusion button
         let incl = this.createButton(includeButtonValue,includeScript);
         folliculeSpan.appendChild(incl);
@@ -185,7 +170,7 @@ class Follicule
         //Exclusion button
         let excl = this.createButton(excludeButtonValue,excludeScript);
         folliculeSpan.appendChild(excl);
-        
+
     }
 }
 
@@ -200,7 +185,7 @@ class TagFollicule extends Follicule
         includeScript += scriptBuilder.submitClick(filterID);
         excludeScript += scriptBuilder.submitClick(filterID);
 
-        super.create(tagElement, includeScript, excludeScript);        
+        super.create(tagElement, includeScript, excludeScript);
     }
 }
 
@@ -208,7 +193,7 @@ class QueryFollicule extends Follicule
 {
     static create(queryFilterValue, archivePage, querySearchElement)
     {
-         /* Author and series (and potentially other) kinds of identifiers
+        /* Author and series (and potentially other) kinds of identifiers
         have to be entered as freeform queries with special operators
         to indicate what's being queried on. */
 
@@ -246,8 +231,8 @@ class QueryFollicule extends Follicule
 //dump them in a static map in the QueryFollicule class?
 function createSeriesFollicule(archivePage, seriesElement)
 {
-    /* 
-    as of 20210809, filtering by series.title appears to be broken on bookmark pages 
+    /*
+    as of 20210809, filtering by series.title appears to be broken on bookmark pages
     so that functionality is being snipped for now
     */
     if (archivePage.pageType != ArchivePageType.Bookmarks_Filtered)
@@ -281,7 +266,6 @@ function createBookmarkTagFollicule(archivePage ,tagElement)
     excludeQueryID = archivePage.bmarkTagExcludeQueryID;
 
     TagFollicule.create(tagElement, filterID, includeQueryID, excludeQueryID);
-
 }
 
 class WorkSearchQueryListing
@@ -293,11 +277,10 @@ class WorkSearchQueryListing
         easy elimination of terms */
 
         const parsedCriteria = archivePage.WorkSearchQueryParsedCriteria();
-        
+
         /* Check if there's any criteria before adding content */
         if (parsedCriteria != [])
         {
-
             let queryList = document.createElement('ul');
             let searchBox = document.getElementById(archivePage.queryID);
             let searchParent = searchBox.parentNode;
@@ -307,8 +290,8 @@ class WorkSearchQueryListing
             searchParent.append(searchBox);
 
             for (const criteriaIndex of parsedCriteria)
-            {    
-            //for each parsed criteria:
+            {
+                //for each parsed criteria:
                 //create a <li> in the list with the criteria text
                 let queryListItem = document.createElement('li');
                 //queryListItem.setAttribute("class","");//see if the tag classer is needed here?"added tag"
@@ -321,38 +304,29 @@ class WorkSearchQueryListing
                 q.value = q.value.replace(\``+criteriaIndex+`\`,"");this.parentNode.hidden=true;}`
 
                 let removeButton = Follicule.createButton("x", deleteScriptString);
-            
+
                 /* do some style changes to make it fit in better with the other sidebar elements*/
 
                 /*the altered appearance also indicates altered behavior, since page doesn't refresh on click for other sidebar elements*/
-            
-
                 removeButton.style.borderRadius = '5em';
-
                 removeButton.style.marginLeft = "2px";
-
                 removeButton.style.width = "3ch";
-
                 removeButton.style.lineHeight = "inherit";
-
                 removeButton.title = "Remove " + criteriaIndex;
 
                 queryListItem.appendChild(removeButton);
-
             }
         }
-
-
     }
 }
 
 /* Ao3 Classes and datatypes */
 
 const ArchivePageType=
-{
-    Works_Filtered: "A page of works that can be filtered",
-    Bookmarks_Filtered: "A page of bookmarks that can be filtered"
-};
+      {
+          Works_Filtered: "A page of works that can be filtered",
+          Bookmarks_Filtered: "A page of bookmarks that can be filtered"
+      };
 
 class ArchiveFilteredPage
 {
@@ -378,7 +352,7 @@ class ArchiveFilteredPage
     WorkSearchQueryParsedCriteria()
     {
         /* Parses 'Search within results' queries according to some simple rules */
-        
+
         //TODO - bookmark windows have more than one SWR input,
         //so this is going to need to be broken out a little.
         let searchboxValue = document.getElementById(this.queryID).value;
@@ -388,22 +362,22 @@ class ArchiveFilteredPage
             let openQuote = false;
             let spacesOutsideQuotes = new Array();
 
-            for (let i = 0; i < searchboxValue.length; i++) 
+            for (let i = 0; i < searchboxValue.length; i++)
             {
-                /* Spaces are the primary token seperators, but we ignore the ones 
+                /* Spaces are the primary token seperators, but we ignore the ones
                 that are wrapped/escaped by double quotes. */
                 switch (searchboxValue.charAt(i))
                 {
                     case "\"":
-                    if (openQuote == false)
-                        openQuote = true;
-                    else
-                        openQuote = false;
-                    break;
-                    
+                        if (openQuote == false)
+                            openQuote = true;
+                        else
+                            openQuote = false;
+                        break;
+
                     case " ":
-                    if (openQuote == false)
-                        spacesOutsideQuotes.push(i);
+                        if (openQuote == false)
+                            spacesOutsideQuotes.push(i);
                 }
             }
 
@@ -418,13 +392,12 @@ class ArchiveFilteredPage
                 queryParsedArgs.push(searchboxValue.substring(startindex,endindex));
                 startindex = endindex;
             }
-
+            
             return (queryParsedArgs);
         }
         /* nothing to parse? */
         else return ([]);
     }
-
 
 }
 
@@ -433,15 +406,14 @@ class ArchiveFilteredWorkPage extends ArchiveFilteredPage
     constructor()
     {
         super(
-            ArchivePageType.Works_Filtered, 
+            ArchivePageType.Works_Filtered,
             "work-filters",
             "work index group",
             "work_search_query",
             "work_search_other_tag_names_autocomplete",
             "work_search_excluded_tag_names_autocomplete"
-            );
+        );
     }
-
 }
 
 class ArchiveFilteredBookmarkPage extends ArchiveFilteredPage
@@ -449,7 +421,7 @@ class ArchiveFilteredBookmarkPage extends ArchiveFilteredPage
     constructor()
     {
         super(
-            ArchivePageType.Bookmarks_Filtered, 
+            ArchivePageType.Bookmarks_Filtered,
             "bookmark-filters",
             "bookmark index group",
             "bookmark_search_bookmarkable_query",
@@ -460,7 +432,6 @@ class ArchiveFilteredBookmarkPage extends ArchiveFilteredPage
         this.bmarkTagExcludeQueryID = "bookmark_search_excluded_bookmark_tag_names_autocomplete";
     }
 }
-
 
 /* todo - these 'process' fns would work OK as filterable page methods: return a list of tags/fandoms/authors/series for this page, etc. */
 function processWorkTags(archivePage)
@@ -537,12 +508,10 @@ function main()
 {
     /* Check to make sure we're on a page with the UI elements we need to actually do filtering. */
     /* This also identifies whether this is a page of works or a page of bookmarks. */
-    
+
     /* WIP: this depends on searching page URLs for relevant elements rather than searching for IDs in the DOM like before. See if this is sustainable? */
 
-
     let archivePage;
-
 
     if (document.URL.search('/works') != 0)
     {
@@ -557,12 +526,7 @@ function main()
     {
         processWorkListing(archivePage);
     }
-
 }
-
-
-
-
 
 (function() {
     'use strict';

@@ -27,8 +27,9 @@ class FolliculeStyle {
     static useBackgroundHighlight = true;
     
     /* Note that these use RGBA rather than RGB - the opacity is a hack to allow background highlighting without overwriting the site's normal background values for an element. */
-    static backgroundHighlightOn = "background: rgba(89, 152, 214, 0.5);";
-    static backgroundHighlightOff = "background: rgba(89, 152, 214, 0.0);";
+
+    static backgroundHighlightOn = "rgba(89, 152, 214, 0.5)";
+    static backgroundHighlightOff = "rgba(89, 152, 214, 0.0)";
 
     /* Borders/Underlining */
     
@@ -36,19 +37,26 @@ class FolliculeStyle {
     
     static useBorder = true;
     
-    static borderOn = " border-style: dashed; border-width: 0px 0px thick 0px;";
-    static borderOff = " border-style: hidden; border-width: 0px 0px thick 0px;";
-
 
     /* The following aren't intended to be easily user-modifiable; they're included here as a common point of access for maintenance purposes. */
 
+
+    /* Styling for the span that wraps a element and follicule */
+    static wrapperSpanStyle = ""
+    
     /* Styling for the span that wraps a follicule button pair. */
-    /* The whitespace and inline-block options are so you don't get a single button wrapping to the next line. */
-    /* Margin-top is there so the underline option has a little space to breathe. */
-    static buttonSpanStyle = `white-space: pre; display: inline-block; margin-top: 2px;`;
+    /* The inline-block option is so you don't get a single button wrapping to the next line. */
+    static buttonSpanStyle = ""
+        //+"white-space: pre;"
+        +"display: inline-block;"
+        +"padding-left: .25em;"
+        +"margin-bottom: .2em;"
+        ;
+ 
     
     /* Styling for follicule buttons */
-    static buttonStyle = "display: inline-block;position: relative; width: 2.25ch;";
+    /* input elements expand to fill space, so we use line-height to fit the element to the size of the containing text */
+    static buttonStyle = "width: min-content;line-height: inherit;vertical-align: text-top;";
 
 }
 
@@ -67,55 +75,51 @@ class scriptBuilder{
 
 class Follicule
 {
-    static wrapperSpanStyle(isEntering)
-    {
-        let styleOutput = "";
-        if (isEntering == true)
-        {
-            if (FolliculeStyle.useBackgroundHighlight == true)
-            {
-                styleOutput += FolliculeStyle.backgroundHighlightOn;
-            }
-            if (FolliculeStyle.useBorder == true)
-            {
-                styleOutput += FolliculeStyle.borderOn;
-            }
-        }
-        else
-        {
-            if (FolliculeStyle.useBackgroundHighlight == true)
-            {
-                styleOutput += FolliculeStyle.backgroundHighlightOff;
-            }
-            if (FolliculeStyle.useBorder == true)
-            {
-                styleOutput += FolliculeStyle.borderOff;
-            }
-        }
-        return (styleOutput);
-    }
     static createWrapperSpan()
     {
         let folliculeWrapper = document.createElement('span');
-        folliculeWrapper.setAttribute("class","follicule wrapper");
 
         if (FolliculeStyle.useBackgroundHighlight == true || FolliculeStyle.useBorder == true)
         {
-            //set default for element so style doesn't 'jump' on mouseover
-            folliculeWrapper.setAttribute("style",Follicule.wrapperSpanStyle(false));
+            
 
             folliculeWrapper.addEventListener("mouseover", function() {
-                folliculeWrapper.setAttribute("style", Follicule.wrapperSpanStyle(true));
+                // TODO: This is reliant on the element being wrapped being a <a> tag with a border - are there cases where this isn't going to be the case?
+                let element = folliculeWrapper.getElementsByTagName("a")[0];
+
+                if (FolliculeStyle.useBorder)
+                {
+                    //TODO: These are aesthetic preferences - dump them into static methods up top for end-user manipulation.
+                    element.style.borderBottomWidth = "thick";
+                    element.style.borderBottomStyle = "dashed";
+                }
+                if (FolliculeStyle.useBackgroundHighlight)
+                {
+
+
+                    element.style.background = FolliculeStyle.backgroundHighlightOn;
+                }
+
             });
 
             folliculeWrapper.addEventListener("mouseout", function() {
-                folliculeWrapper.setAttribute("style", Follicule.wrapperSpanStyle(false));
+                // TODO: This is reliant on the element being wrapped being a <a> tag with a border - are there cases where this isn't going to be the case?
+                let element = folliculeWrapper.getElementsByTagName("a")[0];
+
+                if (FolliculeStyle.useBorder)
+                {
+                    element.style.borderBottomWidth = "revert";
+                    element.style.borderBottomStyle = "revert";
+                }
+                if (FolliculeStyle.useBackgroundHighlight)
+                {
+                    element.style.backgroundColor = "";
+                }
             });
-        }
+        } 
         return (folliculeWrapper);
     }
 
-    
     static createButtonSpan()
     {
          //set up a secondary span for the buttons themselves to sit in next to the element
@@ -142,6 +146,7 @@ class Follicule
 
     static create(element, includeScript, excludeScript, includeButtonValue = '+', excludeButtonValue = '-')
     {
+  
         /* For a given element, create a 'follicule': a UI component
         with functionality related to the content and context of that element.
         */
@@ -150,20 +155,28 @@ class Follicule
         const parentElement = element.parentNode;
         let folliculeWrapper = this.createWrapperSpan();
 
+    
+
         // set the wrapper as child of the parent, replacing the original
         parentElement.replaceChild(folliculeWrapper, element);
         // set element as child of wrapper
         folliculeWrapper.appendChild(element);
 
 
+        
+
         //set up a secondary span for the buttons themselves to sit in next to the element
         let folliculeSpan = this.createButtonSpan();
 
         folliculeWrapper.appendChild(folliculeSpan);
 
+        
+
+
         //and start stuffing elements into that span
-        //spacer - could this maybe be done with padding on the span?
-        folliculeSpan.appendChild(document.createTextNode(" "));
+        
+
+        
 
         //Inclusion button
         let incl = this.createButton(includeButtonValue,includeScript);
@@ -172,6 +185,7 @@ class Follicule
         //Exclusion button
         let excl = this.createButton(excludeButtonValue,excludeScript);
         folliculeSpan.appendChild(excl);
+        
     }
 }
 
@@ -270,6 +284,68 @@ function createBookmarkTagFollicule(archivePage ,tagElement)
 
 }
 
+class WorkSearchQueryListing
+{
+    static create(archivePage)
+    {
+        /* Parses the query input and returns a listing of each search term.
+        Adds UI elements similar to what's already in the filter sidebar to allow
+        easy elimination of terms */
+
+        const parsedCriteria = archivePage.WorkSearchQueryParsedCriteria();
+        
+        /* Check if there's any criteria before adding content */
+        if (parsedCriteria != [])
+        {
+
+            let queryList = document.createElement('ul');
+            let searchBox = document.getElementById(archivePage.queryID);
+            let searchParent = searchBox.parentNode;
+
+            /* push the list element in ahead of the input box */
+            searchParent.replaceChild(queryList,searchBox);
+            searchParent.append(searchBox);
+
+            for (const criteriaIndex of parsedCriteria)
+            {    
+            //for each parsed criteria:
+                //create a <li> in the list with the criteria text
+                let queryListItem = document.createElement('li');
+                //queryListItem.setAttribute("class","");//see if the tag classer is needed here?"added tag"
+                queryListItem.style.overflowWrap = "anywhere";
+
+                queryListItem.innerText = criteriaIndex;
+                queryList.appendChild(queryListItem);
+
+                let deleteScriptString = `{let q = document.getElementById("`+archivePage.queryID+`");
+                q.value = q.value.replace(\``+criteriaIndex+`\`,"");this.parentNode.hidden=true;}`
+
+                let removeButton = Follicule.createButton("x", deleteScriptString);
+            
+                /* do some style changes to make it fit in better with the other sidebar elements*/
+
+                /*the altered appearance also indicates altered behavior, since page doesn't refresh on click for other sidebar elements*/
+            
+
+                removeButton.style.borderRadius = '5em';
+
+                removeButton.style.marginLeft = "2px";
+
+                removeButton.style.width = "3ch";
+
+                removeButton.style.lineHeight = "inherit";
+
+                removeButton.title = "Remove " + criteriaIndex;
+
+                queryListItem.appendChild(removeButton);
+
+            }
+        }
+
+
+    }
+}
+
 /* Ao3 Classes and datatypes */
 
 const ArchivePageType=
@@ -297,6 +373,56 @@ class ArchiveFilteredPage
 
         /* Look in the DOM for the list of works on the page*/
         this.workListing = document.getElementsByClassName(workListingName)[0];
+    }
+
+    WorkSearchQueryParsedCriteria()
+    {
+        /* Parses 'Search within results' queries according to some simple rules */
+        
+        //TODO - bookmark windows have more than one SWR input,
+        //so this is going to need to be broken out a little.
+        let searchboxValue = document.getElementById(this.queryID).value;
+
+        if (searchboxValue.length != 0)
+        {
+            let openQuote = false;
+            let spacesOutsideQuotes = new Array();
+
+            for (let i = 0; i < searchboxValue.length; i++) 
+            {
+                /* Spaces are the primary token seperators, but we ignore the ones 
+                that are wrapped/escaped by double quotes. */
+                switch (searchboxValue.charAt(i))
+                {
+                    case "\"":
+                    if (openQuote == false)
+                        openQuote = true;
+                    else
+                        openQuote = false;
+                    break;
+                    
+                    case " ":
+                    if (openQuote == false)
+                        spacesOutsideQuotes.push(i);
+                }
+            }
+
+            spacesOutsideQuotes.push(searchboxValue.length);
+
+            let queryParsedArgs = new Array();
+            let startindex = 0;
+            let endindex = 0;
+            for (const index of spacesOutsideQuotes)
+            {
+                endindex = index;
+                queryParsedArgs.push(searchboxValue.substring(startindex,endindex));
+                startindex = endindex;
+            }
+
+            return (queryParsedArgs);
+        }
+        /* nothing to parse? */
+        else return ([]);
     }
 
 
@@ -395,10 +521,16 @@ function processWorkAuthors(archivePage)
     }
 }
 
+function processWorkSearchQuery(archivePage)
+{
+    WorkSearchQueryListing.create(archivePage);
+}
+
 function processWorkListing(archivePage)
 {
     processWorkTags(archivePage);
     processWorkAuthors(archivePage);
+    processWorkSearchQuery(archivePage);
 }
 
 function main()

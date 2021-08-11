@@ -56,7 +56,7 @@ class FolliculeStyle {
     
     /* Styling for follicule buttons */
     /* input elements expand to fill space, so we use line-height to fit the element to the size of the containing text */
-    static buttonStyle = "width: min-content;line-height: inherit;vertical-align: text-top;";
+    static buttonStyle = "width: 1.4em;line-height: inherit;vertical-align: text-top;";
 
 }
 
@@ -108,8 +108,8 @@ class Follicule
 
                 if (FolliculeStyle.useBorder)
                 {
-                    element.style.borderBottomWidth = "revert";
-                    element.style.borderBottomStyle = "revert";
+                    element.style.borderBottomWidth = "";
+                    element.style.borderBottomStyle = "";
                 }
                 if (FolliculeStyle.useBackgroundHighlight)
                 {

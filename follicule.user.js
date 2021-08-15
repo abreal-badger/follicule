@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Follicule: Streamlined AO3 Search Filtering
 // @namespace    http://tampermonkey.net/
-// @version      0.5.3
+// @version      0.5.3.1
 // @description  Adds button elements to author names and tags on AO3 search results to allow easy filtering.
 // @author       lyrisey
 // @match        *://*.archiveofourown.org/tags/**/works*
@@ -63,7 +63,11 @@ class FolliculeStyle {
 
     /* Styling for follicule buttons */
     /* input elements expand to fill space, so we use line-height to fit the element to the size of the containing text */
-    static buttonStyle = "width: 1.4em;line-height: inherit;vertical-align: text-top;";
+    static buttonStyle = ""
+    +"width: 1.4em;"
+    +"line-height: inherit;"
+    +"vertical-align: text-top;"
+    ;
 
 }
 

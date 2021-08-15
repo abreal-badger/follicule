@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Follicule: Streamlined AO3 Search Filtering
 // @namespace    http://tampermonkey.net/
-// @version      0.5.3.1
+// @version      0.5.3.2
 // @description  Adds button elements to author names and tags on AO3 search results to allow easy filtering.
 // @author       lyrisey
 // @match        *://*.archiveofourown.org/tags/**/works*
@@ -62,11 +62,12 @@ class FolliculeStyle {
 
 
     /* Styling for follicule buttons */
-    /* input elements expand to fill space, so we use line-height to fit the element to the size of the containing text */
+    /* input elements expand to fill space, so we use line-height
+    to fit the element to the size of the containing text */
     static buttonStyle = ""
     +"width: 1.4em;"
     +"line-height: inherit;"
-    +"vertical-align: text-top;"
+    //+"vertical-align: text-top;"
     ;
 
 }
@@ -96,8 +97,8 @@ class Follicule
 
 
             folliculeWrapper.addEventListener("mouseover", function() {
-                // TODO: This is reliant on the element being wrapped being a <a> tag with a border - are there cases where this isn't going to be the case?
-                let element = folliculeWrapper.getElementsByTagName("a")[0];
+                //a wrapper's first child should always be the original page element it's wrapping
+                let element = folliculeWrapper.children[0];
 
                 if (FolliculeStyle.useBorder)
                 {
@@ -115,8 +116,8 @@ class Follicule
             });
 
             folliculeWrapper.addEventListener("mouseout", function() {
-                // TODO: This is reliant on the element being wrapped being a <a> tag with a border - are there cases where this isn't going to be the case?
-                let element = folliculeWrapper.getElementsByTagName("a")[0];
+                //a wrapper's first child should always be the original page element it's wrapping
+                let element = folliculeWrapper.children[0];
 
                 if (FolliculeStyle.useBorder)
                 {
@@ -168,14 +169,10 @@ class Follicule
         const parentElement = element.parentNode;
         let folliculeWrapper = this.createWrapperSpan();
 
-
-
         // set the wrapper as child of the parent, replacing the original
         parentElement.replaceChild(folliculeWrapper, element);
         // set element as child of wrapper
         folliculeWrapper.appendChild(element);
-
-
 
 
         //set up a secondary span for the buttons themselves to sit in next to the element
@@ -183,14 +180,7 @@ class Follicule
 
         folliculeWrapper.appendChild(folliculeSpan);
 
-
-
-
         //and start stuffing elements into that span
-
-
-
-
         //Inclusion button
         let incl = this.createButton(includeButtonValue,includeScript);
         folliculeSpan.appendChild(incl);

@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Follicule: Streamlined AO3 Search Filtering
 // @namespace    http://tampermonkey.net/
-// @version      0.5.3.2
+// @version      0.5.3.3
 // @description  Adds button elements to author names and tags on AO3 search results to allow easy filtering.
 // @author       lyrisey
 // @match        *://*.archiveofourown.org/tags/**/works*
@@ -544,20 +544,22 @@ function main()
     /* WIP: this depends on searching page URLs for relevant elements rather than searching for IDs in the DOM like before. See if this is sustainable? */
 
 
+	console.log(1);
     let archivePage;
 
 
-    if (document.URL.search('/works') != 0)
+    if (document.URL.search('/works') != -1)
     {
         archivePage = new ArchiveFilteredWorkPage();
     }
-    else if (document.URL.search('/bookmarks') != 0)
+    else if (document.URL.search('/bookmarks') != -1)
     {
         archivePage = new ArchiveFilteredBookmarkPage();
     }
 
     if (archivePage != undefined)
     {
+		console.log(archivePage.queryID);
         processWorkListing(archivePage);
     }
 

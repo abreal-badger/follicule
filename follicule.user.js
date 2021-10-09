@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Follicule: Streamlined AO3 Search Filtering
 // @namespace    http://tampermonkey.net/
-// @version      0.5.3.3
+// @version      0.5.3.4
 // @description  Adds button elements to author names and tags on AO3 search results to allow easy filtering.
 // @author       lyrisey
 // @match        *://*.archiveofourown.org/tags/**/works*
@@ -158,7 +158,7 @@ class Follicule
         return (follButton);
     }
 
-    static create(element, includeScript, excludeScript, includeButtonValue = '+', excludeButtonValue = '-')
+    static create(element, folliculeButtonArray)
     {
 
         /* For a given element, create a 'follicule': a UI component
@@ -171,7 +171,7 @@ class Follicule
 
         // set the wrapper as child of the parent, replacing the original
         parentElement.replaceChild(folliculeWrapper, element);
-        // set element as child of wrapper
+        // set the original element as child of wrapper
         folliculeWrapper.appendChild(element);
 
 
@@ -180,19 +180,52 @@ class Follicule
 
         folliculeWrapper.appendChild(folliculeSpan);
 
-        //and start stuffing elements into that span
-        //Inclusion button
-        let incl = this.createButton(includeButtonValue,includeScript);
-        folliculeSpan.appendChild(incl);
-
-        //Exclusion button
-        let excl = this.createButton(excludeButtonValue,excludeScript);
-        folliculeSpan.appendChild(excl);
+        //and start stuffing buttons into that span
+        for (const follButton of folliculeButtonArray)
+        {
+            folliculeSpan.appendChild(follButton);
+        }
 
     }
 }
 
-class TagFollicule extends Follicule
+class SpecificValueBinaryFollicule extends Follicule
+{
+    /* This follicule is oriented around the presence or absence of a specific data element:
+    e.g. the string of an authorname or a tag. It has two buttons, '-' and '+', to include or
+    exclude that specific element in the active filter. */
+    static create (tagElement, includeScript, excludeScript)
+    {
+        let buttonArray = new Array();
+        
+        let includeButton = super.createButton('+', includeScript);
+        buttonArray.push(includeButton);
+
+        let excludeButton = super.createButton('-', excludeScript);
+        buttonArray.push(excludeButton);
+
+        super.create(tagElement, buttonArray);
+    }
+}
+
+class SpecificValueUnaryFollicule extends Follicule
+{
+    /* This follicule is oriented around a data element that only shows up in one specific context:
+    e.g. the 'language' dropdown option, which only allows picking a single data option to include,
+    and does not allow multi-element complexity or the ability to exclude */
+
+    static create (tagElement, includeScript, excludeScript)
+    {
+        let buttonArray = new Array();
+        
+        let includeButton = super.createButton('+', includeScript);
+        buttonArray.push(includeButton);
+
+        super.create(tagElement, buttonArray);
+    }
+}
+
+class TagFollicule extends SpecificValueBinaryFollicule
 {
     static create(tagElement, filterID, includeQueryID, excludeQueryID)
     {
@@ -207,7 +240,7 @@ class TagFollicule extends Follicule
     }
 }
 
-class QueryFollicule extends Follicule
+class QueryFollicule extends SpecificValueBinaryFollicule
 {
     static create(queryFilterValue, archivePage, querySearchElement)
     {
@@ -465,7 +498,7 @@ class ArchiveFilteredBookmarkPage extends ArchiveFilteredPage
 }
 
 
-/* todo - these 'process' fns would work OK as filterable page methods: return a list of tags/fandoms/authors/series for this page, etc. */
+/* TODO - these 'process' fns would work OK as filterable page methods: return a list of tags/fandoms/authors/series for this page, etc. */
 function processWorkTags(archivePage)
 {
     /* Follicules for tags (relationship, character, freeform) */

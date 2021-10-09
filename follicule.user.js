@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Follicule: Streamlined AO3 Search Filtering
 // @namespace    http://tampermonkey.net/
-// @version      0.5.3.4
+// @version      0.5.3.5
 // @description  Adds button elements to author names and tags on AO3 search results to allow easy filtering.
 // @author       lyrisey
 // @match        *://*.archiveofourown.org/tags/**/works*
@@ -94,8 +94,6 @@ class Follicule
 
         if (FolliculeStyle.useBackgroundHighlight == true || FolliculeStyle.useBorder == true)
         {
-
-
             folliculeWrapper.addEventListener("mouseover", function() {
                 //a wrapper's first child should always be the original page element it's wrapping
                 let element = folliculeWrapper.children[0];
@@ -108,8 +106,6 @@ class Follicule
                 }
                 if (FolliculeStyle.useBackgroundHighlight)
                 {
-
-
                     element.style.background = FolliculeStyle.backgroundHighlightOn;
                 }
 
@@ -160,7 +156,6 @@ class Follicule
 
     static create(element, folliculeButtonArray)
     {
-
         /* For a given element, create a 'follicule': a UI component
         with functionality related to the content and context of that element.
         */
@@ -173,7 +168,6 @@ class Follicule
         parentElement.replaceChild(folliculeWrapper, element);
         // set the original element as child of wrapper
         folliculeWrapper.appendChild(element);
-
 
         //set up a secondary span for the buttons themselves to sit in next to the element
         let folliculeSpan = this.createButtonSpan();
@@ -278,6 +272,18 @@ class QueryFollicule extends SpecificValueBinaryFollicule
     }
 }
 
+class LanguageFollicule extends SpecificValueUnaryFollicule
+{
+    static create(langElement, filterID, langSelectID, langOptionPosition)
+    {
+        // NB: apparently this gets a lot simpler upfront with jquery
+        let scriptText = `document.getElementById("` + langSelectID + `")[`+langOptionPosition+`].selected = true;`
+
+        scriptText += scriptBuilder.submitClick(filterID);
+        super.create (langElement, scriptText)
+    }
+}
+
 //TODO: move these string literals for author and series searchterms into a single location for ease of maint.
 //dump them in a static map in the QueryFollicule class?
 function createSeriesFollicule(archivePage, seriesElement)
@@ -317,6 +323,34 @@ function createBookmarkTagFollicule(archivePage ,tagElement)
     excludeQueryID = archivePage.bmarkTagExcludeQueryID;
 
     TagFollicule.create(tagElement, filterID, includeQueryID, excludeQueryID);
+
+}
+
+function createLanguageFollicule(archivePage, languageElement)
+{
+    let filterID;
+    let langSelectID;
+
+    filterID = archivePage.filterID;
+    langSelectID = archivePage.languageSelectorID;
+
+    let languageName = languageElement.innerText;
+
+    //lookup the position of the option value for this language name
+    let selector = document.getElementById(langSelectID);
+
+    let optionIndex = 0;
+    for (let langOptionElement of selector)
+    {
+        if (langOptionElement.innerText == languageName)
+        {
+            break;
+        }
+        optionIndex++;
+    }
+
+
+    LanguageFollicule.create(languageElement, filterID, langSelectID, optionIndex)
 
 }
 
@@ -392,7 +426,7 @@ const ArchivePageType=
 
 class ArchiveFilteredPage
 {
-    constructor(pageType, filterID, workListingName, queryID, tagIncludeQueryID, tagExcludeQueryID)
+    constructor(pageType, filterID, workListingName, queryID, tagIncludeQueryID, tagExcludeQueryID,languageSelectorID)
     {
         this.pageType = pageType;
         this.filterID = filterID;
@@ -400,6 +434,7 @@ class ArchiveFilteredPage
         this.queryID = queryID;
         this.tagIncludeQueryID = tagIncludeQueryID;
         this.tagExcludeQueryID = tagExcludeQueryID;
+        this.languageSelectorID = languageSelectorID;
 
         /* Verify via the document that we're on the right pagetype for these IDs */
         if (document.getElementById(filterID)== null)
@@ -474,7 +509,8 @@ class ArchiveFilteredWorkPage extends ArchiveFilteredPage
             "work index group",
             "work_search_query",
             "work_search_other_tag_names_autocomplete",
-            "work_search_excluded_tag_names_autocomplete"
+            "work_search_excluded_tag_names_autocomplete",
+            "work_search_language_id"
             );
     }
 
@@ -490,7 +526,9 @@ class ArchiveFilteredBookmarkPage extends ArchiveFilteredPage
             "bookmark index group",
             "bookmark_search_bookmarkable_query",
             "bookmark_search_other_tag_names_autocomplete",
-            "bookmark_search_excluded_tag_names_autocomplete");
+            "bookmark_search_excluded_tag_names_autocomplete",
+            "bookmark_search_language_id"
+            );
 
         this.bmarkTagIncludeQueryID = "bookmark_search_other_bookmark_tag_names_autocomplete";
         this.bmarkTagExcludeQueryID = "bookmark_search_excluded_bookmark_tag_names_autocomplete";
@@ -498,7 +536,13 @@ class ArchiveFilteredBookmarkPage extends ArchiveFilteredPage
 }
 
 
-/* TODO - these 'process' fns would work OK as filterable page methods: return a list of tags/fandoms/authors/series for this page, etc. */
+/* TODO - these 'process' fns would work OK as filterable page methods: 
+    return a list of tags/fandoms/authors/series for this page, etc. 
+    
+    this might also be useful as a root basis for parsing/scraping a page and internalizing everything as structured data objects?
+
+    
+    */
 function processWorkTags(archivePage)
 {
     /* Follicules for tags (relationship, character, freeform) */
@@ -557,6 +601,22 @@ function processWorkAuthors(archivePage)
     }
 }
 
+function processWorkLanguages(archivePage)
+{
+    // unary follicules for language selection
+    //theoretically, <select> elements allow for multiple selection, but 
+    //filter logic here doesn't afford that in this case.
+
+    for (let langClassElement of archivePage.workListing.getElementsByClassName("language"))
+    {
+        if (langClassElement.localName == 'dd')
+        {
+            createLanguageFollicule(archivePage, langClassElement);
+        }
+    }
+
+}
+
 function processWorkSearchQuery(archivePage)
 {
     WorkSearchQueryListing.create(archivePage);
@@ -566,7 +626,10 @@ function processWorkListing(archivePage)
 {
     processWorkTags(archivePage);
     processWorkAuthors(archivePage);
+
+    processWorkLanguages(archivePage);
     processWorkSearchQuery(archivePage);
+
 }
 
 function main()
@@ -576,8 +639,6 @@ function main()
 
     /* WIP: this depends on searching page URLs for relevant elements rather than searching for IDs in the DOM like before. See if this is sustainable? */
 
-
-	console.log(1);
     let archivePage;
 
 

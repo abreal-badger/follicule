@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Follicule: Streamlined AO3 Search Filtering
 // @namespace    http://tampermonkey.net/
-// @version      0.5.3.5
+// @version      0.5.3.6
 // @description  Adds button elements to author names and tags on AO3 search results to allow easy filtering.
 // @author       lyrisey
 // @match        *://*.archiveofourown.org/tags/**/works*
@@ -86,6 +86,8 @@ class scriptBuilder{
     }
 }
 
+
+
 class Follicule
 {
     static createWrapperSpan()
@@ -140,19 +142,7 @@ class Follicule
         return (folliculeSpan);
     }
 
-    static createButton(buttonText, buttonScript)
-    {
-        let follButton = document.createElement("input");
-        follButton.setAttribute("type","button");
-        follButton.setAttribute("value",buttonText);
-        follButton.setAttribute("onclick", buttonScript)
-
-        //TODO: set up button css in a stylesheet because this is apparently bad practice
-        follButton.setAttribute("style",FolliculeStyle.buttonStyle);
-        //maybe see about the alignment too?
-
-        return (follButton);
-    }
+    
 
     static create(element, folliculeButtonArray)
     {
@@ -183,60 +173,26 @@ class Follicule
     }
 }
 
-class SpecificValueBinaryFollicule extends Follicule
+class FolliculeButton
 {
-    /* This follicule is oriented around the presence or absence of a specific data element:
-    e.g. the string of an authorname or a tag. It has two buttons, '-' and '+', to include or
-    exclude that specific element in the active filter. */
-    static create (tagElement, includeScript, excludeScript)
-    {
-        let buttonArray = new Array();
-        
-        let includeButton = super.createButton('+', includeScript);
-        buttonArray.push(includeButton);
+    static create(buttonText, buttonScript)
+    {        
+        let follButton = document.createElement("input");
+        follButton.setAttribute("type","button");
+        follButton.setAttribute("value",buttonText);
+        follButton.setAttribute("onclick", buttonScript)
 
-        let excludeButton = super.createButton('-', excludeScript);
-        buttonArray.push(excludeButton);
+        //TODO: set up button css in a stylesheet because this is apparently bad practice
+        follButton.setAttribute("style",FolliculeStyle.buttonStyle);
+        //maybe see about the alignment too?
 
-        super.create(tagElement, buttonArray);
+        return (follButton);
     }
 }
 
-class SpecificValueUnaryFollicule extends Follicule
+class QueryFolliculeButton extends FolliculeButton
 {
-    /* This follicule is oriented around a data element that only shows up in one specific context:
-    e.g. the 'language' dropdown option, which only allows picking a single data option to include,
-    and does not allow multi-element complexity or the ability to exclude */
-
-    static create (tagElement, includeScript, excludeScript)
-    {
-        let buttonArray = new Array();
-        
-        let includeButton = super.createButton('+', includeScript);
-        buttonArray.push(includeButton);
-
-        super.create(tagElement, buttonArray);
-    }
-}
-
-class TagFollicule extends SpecificValueBinaryFollicule
-{
-    static create(tagElement, filterID, includeQueryID, excludeQueryID)
-    {
-        let tagname = tagElement.text;
-        let includeScript = scriptBuilder.addTag(includeQueryID, tagname);
-        let excludeScript = scriptBuilder.addTag(excludeQueryID, tagname);
-
-        includeScript += scriptBuilder.submitClick(filterID);
-        excludeScript += scriptBuilder.submitClick(filterID);
-
-        super.create(tagElement, includeScript, excludeScript);
-    }
-}
-
-class QueryFollicule extends SpecificValueBinaryFollicule
-{
-    static create(queryFilterValue, archivePage, querySearchElement)
+    static create(archivePage, buttonText, queryDataFilterOperator,queryDataField,queryDataComparator,queryDataValue, wrapValueQuotes)
     {
          /* Author and series (and potentially other) kinds of identifiers
         have to be entered as freeform queries with special operators
@@ -247,32 +203,135 @@ class QueryFollicule extends SpecificValueBinaryFollicule
             -creators:[authorname] to exclude them
             params for this fn thus mirror this:
             [queryfiltervalue][querysearchelement.text]
+
+            ...although that isn't quite true: it's not a pair, it's a triad
+            of [classifier][operator][value] terms:
+
+            creators:[authorname] is 'creator field EQUALS authorname'
+            -creators:[authorname] is '(not)creator field EQUALS authorname'
+
+            words:1000 is 'words field EQUALS 1000'
+            words>1000 is 'words field MORE THAN 1000'
+
+        */
+
+        /*
+        what do we need here?
+        -the script needs to know where the final query string is to be inserted.
+        -the script needs to know the final query string.
+
+        the query string is composed of subcomponents
+        - the field that is being searched (creator, words, series)
+        - a valid value in that field (author name, wordcount value)
+        - the comparator that's used to match field values in the DB against the specified value(:,<,>)
+        - the operator that says 'if this matches/is true, include/exclude' (- operator)
         */
 
         let filterID = archivePage.filterID;
         let queryID = archivePage.queryID;
-        let queryValue = querySearchElement.text;
 
         //wrap in escaped quotes - these values can have spaces and we want to catch that.
-        queryValue = `\\"` + queryValue + `\\"`;
-
-        let QueryText = queryFilterValue + queryValue;
+        if (wrapValueQuotes)
+        {
+            queryDataValue = `\\"` + queryDataValue + `\\"`;
+        }
+        
+        let QueryText = queryDataFilterOperator + queryDataField + queryDataComparator + queryDataValue;
 
         //todo - dump this in a script setup for the ao3 class rather than Scriptbuilder?
         let scriptText = `document.getElementById("` + queryID + `").value= document.getElementById("` + queryID + `").value+`;
 
-        let includeScript = scriptText + `" ` + QueryText+ `";`;
+        let buttonScript = scriptText + `" ` + QueryText+ `";`;
 
-        let excludeScript = scriptText + `" ` + "-" + QueryText+ `";`;
+        /* TODO: refactor the submitClick so it's all called from a consistent level  */
+        buttonScript += scriptBuilder.submitClick(filterID);
+
+        let follButton = super.create(buttonText, buttonScript);
+
+
+        return (follButton);
+    }
+}
+
+
+class QueryFollicule extends Follicule
+{
+    static create (tagElement, buttonArray)
+    {
+        super.create(tagElement, buttonArray);
+    }
+}
+
+
+class BinaryFilterFollicule extends Follicule
+{
+    /* This follicule is oriented around the presence or absence of a specific data element:
+    e.g. the string of an authorname or a tag. It has two buttons to include or
+    exclude that specific element in the active filter. */
+    static create (tagElement, includeButton, excludeButton)
+    {
+        let buttonArray = new Array();
+        
+        buttonArray.push(includeButton);
+        buttonArray.push(excludeButton);
+
+        super.create(tagElement, buttonArray);
+    }
+}
+
+class UnaryFilterFollicule extends Follicule
+{
+    /* This follicule is oriented around a data element that only shows up in one specific context:
+    e.g. the 'language' dropdown option, which only allows picking a single data option to include,
+    and does not allow multi-element complexity or the ability to exclude */
+
+    static create (tagElement, includeButton)
+    {
+        let buttonArray = new Array();
+
+        buttonArray.push(includeButton);
+
+        super.create(tagElement, buttonArray);
+    }
+}
+
+class RangeFilterFollicule extends Follicule
+{
+    /* This follicule is oriented around numeric data elements that allow for filtering on range-based
+    criteria: less-than, greater-than, equal-to comparisons. */
+    static create (rangeElement, lessThanButton, equalToButton, greaterThanButton)
+    {
+        let buttonArray = new Array();
+        
+        buttonArray.push(lessThanButton);
+        buttonArray.push(equalToButton);
+        buttonArray.push(greaterThanButton);
+
+        super.create(rangeElement, buttonArray);
+    }
+}
+
+
+class TagFollicule extends BinaryFilterFollicule
+{
+    static create(tagElement, filterID, includeQueryID, excludeQueryID)
+    {
+        let tagname = tagElement.text;
+        let includeScript = scriptBuilder.addTag(includeQueryID, tagname);
+        let excludeScript = scriptBuilder.addTag(excludeQueryID, tagname);
 
         includeScript += scriptBuilder.submitClick(filterID);
         excludeScript += scriptBuilder.submitClick(filterID);
 
-        super.create(querySearchElement, includeScript, excludeScript);
+        let includeButton = FolliculeButton.create("+",includeScript);
+        let excludeButton = FolliculeButton.create("-",excludeScript);
+
+        super.create(tagElement, includeButton, excludeButton)
     }
 }
 
-class LanguageFollicule extends SpecificValueUnaryFollicule
+
+class LanguageFollicule extends UnaryFilterFollicule
 {
     static create(langElement, filterID, langSelectID, langOptionPosition)
     {
@@ -280,13 +339,16 @@ class LanguageFollicule extends SpecificValueUnaryFollicule
         let scriptText = `document.getElementById("` + langSelectID + `")[`+langOptionPosition+`].selected = true;`
 
         scriptText += scriptBuilder.submitClick(filterID);
-        super.create (langElement, scriptText)
+
+        let includeButton = FolliculeButton.create("+",scriptText);
+        super.create (langElement, includeButton);
     }
 }
 
+
 //TODO: move these string literals for author and series searchterms into a single location for ease of maint.
 //dump them in a static map in the QueryFollicule class?
-function createSeriesFollicule(archivePage, seriesElement)
+function createSeriesFollicule(archivePage, seriesElement)  
 {
     /*
     as of 20210809, filtering by series.title appears to be broken on bookmark pages
@@ -294,13 +356,25 @@ function createSeriesFollicule(archivePage, seriesElement)
     */
     if (archivePage.pageType != ArchivePageType.Bookmarks_Filtered)
     {
-        QueryFollicule.create(`series.title:`, archivePage, seriesElement);
+
+        let seriesname = seriesElement.text;
+
+        let includeButton = QueryFolliculeButton.create(archivePage,"+","",`series.title`,":",seriesname);
+        let excludeButton = QueryFolliculeButton.create(archivePage,"-","-",`series.title`,":",seriesname);
+
+        BinaryFilterFollicule.create(seriesElement, includeButton, excludeButton);
+
     }
 }
 
 function createAuthorFollicule(archivePage,authorElement)
 {
-    QueryFollicule.create(`creators:`, archivePage, authorElement);
+    let authorname = authorElement.text;
+
+    let includeButton = QueryFolliculeButton.create(archivePage,"+","",`creators`,":",authorname);
+    let excludeButton = QueryFolliculeButton.create(archivePage,"-","-",`creators`,":",authorname);
+
+    BinaryFilterFollicule.create(authorElement, includeButton, excludeButton);
 }
 
 function createWorkTagFollicule(archivePage, tagElement)
@@ -349,10 +423,32 @@ function createLanguageFollicule(archivePage, languageElement)
         optionIndex++;
     }
 
-
     LanguageFollicule.create(languageElement, filterID, langSelectID, optionIndex)
-
 }
+
+function createNumericRangeFollicule(archivePage, ddElement)
+{
+    /* TODO: using QueryFolliculeButtons for these results in weird behavior:
+        filtering on these arguments means they don't show up in the 'search within results' box, 
+        meaning that applying this filter is undone the next time the page arguments are reset from the filter UI.
+
+        For something like wordcount, there's existing UI (the from/to fields) that can serve as
+        targets for follicule scripts... but for kudos,hits, etc, there's not a good solution?
+        */
+
+    let rangeElement = ddElement;
+    
+    /* trim commas so we have single-number values */
+    let elementValue = rangeElement.innerText.replaceAll(',', '');
+    
+
+    let lessThanButton = QueryFolliculeButton.create(archivePage,"<","",rangeElement.className,"<",elementValue,false);
+    let equalToButton = QueryFolliculeButton.create(archivePage,"=","",rangeElement.className,":",elementValue,false);
+    let greaterThanButton = QueryFolliculeButton.create(archivePage,">","",rangeElement.className,">",elementValue,false);
+
+    RangeFilterFollicule.create(rangeElement, lessThanButton, equalToButton, greaterThanButton);
+}
+
 
 class WorkSearchQueryListing
 {
@@ -390,7 +486,7 @@ class WorkSearchQueryListing
                 let deleteScriptString = `{let q = document.getElementById("`+archivePage.queryID+`");
                 q.value = q.value.replace(\``+criteriaIndex+`\`,"");this.parentNode.hidden=true;}`
 
-                let removeButton = Follicule.createButton("x", deleteScriptString);
+                let removeButton = FolliculeButton.create("x", deleteScriptString);
 
                 /* do some style changes to make it fit in better with the other sidebar elements*/
 
@@ -582,7 +678,7 @@ function processWorkTags(archivePage)
     {
         for (let series of sequentials.getElementsByTagName("a"))
         {
-            createSeriesFollicule(archivePage, series);
+            createSeriesFollicule(archivePage, series); 
         }
     }
 
@@ -601,20 +697,32 @@ function processWorkAuthors(archivePage)
     }
 }
 
-function processWorkLanguages(archivePage)
-{
-    // unary follicules for language selection
-    //theoretically, <select> elements allow for multiple selection, but 
-    //filter logic here doesn't afford that in this case.
 
-    for (let langClassElement of archivePage.workListing.getElementsByClassName("language"))
+function processWorkStats(archivePage)
+{
+    for (let workStatusBlock of archivePage.workListing.getElementsByClassName("stats"))
     {
-        if (langClassElement.localName == 'dd')
+        for (let ddElement of workStatusBlock.getElementsByTagName("dd"))
         {
-            createLanguageFollicule(archivePage, langClassElement);
+            if (ddElement.className == "language")
+            {
+                // unary follicules for language selection
+                //theoretically, <select> elements allow for multiple selection, but 
+                //filter logic here doesn't afford that in this case.
+                createLanguageFollicule(archivePage, ddElement);
+            }
+            else if (
+                      (ddElement.className == "words")
+                    ||(ddElement.className == "hits")
+                    ||(ddElement.className == "kudos")
+                    ||(ddElement.className == "bookmarks")
+                    ||(ddElement.className == "comments")
+                )
+            {
+                createNumericRangeFollicule(archivePage, ddElement);
+            }
         }
     }
-
 }
 
 function processWorkSearchQuery(archivePage)
@@ -627,7 +735,9 @@ function processWorkListing(archivePage)
     processWorkTags(archivePage);
     processWorkAuthors(archivePage);
 
-    processWorkLanguages(archivePage);
+    processWorkStats(archivePage);
+
+
     processWorkSearchQuery(archivePage);
 
 }
